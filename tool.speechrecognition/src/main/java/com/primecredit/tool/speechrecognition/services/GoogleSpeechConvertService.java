@@ -96,7 +96,7 @@ public class GoogleSpeechConvertService {
 		return resultMap;
 	}
 
-	public Map<Integer, String> asyncRecognizeFile(String fileName) throws Exception, IOException {
+	private Map<Integer, String> asyncRecognizeFile(String fileName) throws Exception, IOException {
 		Map<Integer, String> resultMap = new LinkedHashMap<Integer, String>();
 		StringBuilder sbTranscript1 = new StringBuilder();
 		StringBuilder sbTranscript2 = new StringBuilder();

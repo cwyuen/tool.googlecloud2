@@ -1,5 +1,9 @@
 package com.primecredit.tool.speechrecognition.controller;
 
+import java.io.File;
+import java.util.Date;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.primecredit.tool.common.util.WavFileHandler;
 import com.primecredit.tool.common.wsobject.request.RecongnitionRequest;
 import com.primecredit.tool.common.wsobject.response.RecognitionResponse;
 import com.primecredit.tool.speechrecognition.services.GoogleSpeechConvertService;
@@ -28,7 +33,25 @@ public class SpeechRecognitionController {
 
 	@RequestMapping(value = "/recognition", method = RequestMethod.POST)
 	public RecognitionResponse recognition(@RequestBody RecongnitionRequest request) {
-		return null;
+		RecognitionResponse response = new RecognitionResponse();
+		response.setClientMachineId(request.getClientMachineId());
+		response.setMillisecond(new Date().getTime());
+		
+		WavFileHandler wavFileHandler = WavFileHandler.getInstance();
+		
+		StringBuilder sbTempFileName = new StringBuilder();
+		sbTempFileName.append(request.getClientMachineId() .replaceAll("[^\\p{Alpha}\\p{Digit}]+",""));
+		sbTempFileName.append("_");
+		sbTempFileName.append(request.getMillisecond());
+		sbTempFileName.append(".wav");
+		
+		File sourceFile = wavFileHandler.generateFile(tempPath, sbTempFileName.toString(), request.getFileData());
+		
+		List<String> speechTextList = googleSpeechConvertService.convert(sbTempFileName.toString());
+		response.setSpeechTextList(speechTextList);
+		
+		sourceFile.delete();
+		return response;
 		
 	}
 		
