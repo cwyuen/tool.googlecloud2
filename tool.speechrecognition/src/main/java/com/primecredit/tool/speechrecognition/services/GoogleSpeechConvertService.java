@@ -11,6 +11,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +35,7 @@ import com.primecredit.tool.common.util.WavFileHandler;
 public class GoogleSpeechConvertService {
 	
 	private static Logger logger = LoggerFactory.getLogger(GoogleSpeechConvertService.class);
+	private static int MAX_ALTERNATIVE = 20;
 	
 	@Value("${temp.path}")
 	private String tempPath;
@@ -87,33 +92,38 @@ public class GoogleSpeechConvertService {
 
 	private Map<Integer, String> initResultMap() {
 		Map<Integer, String> resultMap = new LinkedHashMap<Integer, String>();
-		resultMap.put(1, "");
-		resultMap.put(2, "");
-		resultMap.put(3, "");
-		resultMap.put(4, "");
-		resultMap.put(5, "");
+		for(int i=1; i<=MAX_ALTERNATIVE; i++){
+			resultMap.put(i, "");
+		}
 
 		return resultMap;
 	}
 
 	private Map<Integer, String> asyncRecognizeFile(String fileName) throws Exception, IOException {
 		Map<Integer, String> resultMap = new LinkedHashMap<Integer, String>();
-		StringBuilder sbTranscript1 = new StringBuilder();
-		StringBuilder sbTranscript2 = new StringBuilder();
-		StringBuilder sbTranscript3 = new StringBuilder();
-		StringBuilder sbTranscript4 = new StringBuilder();
-		StringBuilder sbTranscript5 = new StringBuilder();
-
+		
 		// Instantiates a client with GOOGLE_APPLICATION_CREDENTIALS
 		SpeechClient speech = SpeechClient.create();
 
 		Path path = Paths.get(fileName);
 		byte[] data = Files.readAllBytes(path);
 		ByteString audioBytes = ByteString.copyFrom(data);
+		
+		File srcFile = new File(fileName);
+		AudioInputStream ais = null;
+		AudioFormat format = null;
+
+		ais = AudioSystem.getAudioInputStream(srcFile);
+		format = ais.getFormat();
+				
 
 		// Configure request with local raw PCM audio
-		RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.LINEAR16)
-				.setLanguageCode("yue-Hant-HK").setSampleRateHertz(8000).setProfanityFilter(false).setMaxAlternatives(5)
+		RecognitionConfig config = RecognitionConfig.newBuilder()
+				.setEncoding(AudioEncoding.LINEAR16)
+				.setLanguageCode("yue-Hant-HK")
+				.setSampleRateHertz((int) format.getSampleRate())
+				.setProfanityFilter(false)
+				.setMaxAlternatives(MAX_ALTERNATIVE)
 				.build();
 
 		RecognitionAudio audio = RecognitionAudio.newBuilder().setContent(audioBytes).build();
@@ -138,25 +148,20 @@ public class GoogleSpeechConvertService {
 			for (SpeechRecognitionAlternative alternative : alternatives) {
 				// System.out.println(alternative.getConfidence());
 				// System.out.println("[" + i + "]\t" + alternative.getTranscript());
-				if (i == 1)
-					sbTranscript1.append(alternative.getTranscript());
-				if (i == 2)
-					sbTranscript2.append(alternative.getTranscript());
-				if (i == 3)
-					sbTranscript3.append(alternative.getTranscript());
-				if (i == 4)
-					sbTranscript4.append(alternative.getTranscript());
-				if (i == 5)
-					sbTranscript5.append(alternative.getTranscript());
+				if(resultMap.containsKey(i)){
+					StringBuilder sb  = new StringBuilder();
+					sb.append(resultMap.get(i));
+					sb.append(alternative.getTranscript());
+				}else{
+					resultMap.put(i, alternative.getTranscript());
+				}
 				i++;
+			
 			}
 		}
+		ais.close();
 		speech.close();
-		resultMap.put(1, sbTranscript1.toString());
-		resultMap.put(2, sbTranscript2.toString());
-		resultMap.put(3, sbTranscript3.toString());
-		resultMap.put(4, sbTranscript4.toString());
-		resultMap.put(5, sbTranscript5.toString());
+	
 		return resultMap;
 	}
 	

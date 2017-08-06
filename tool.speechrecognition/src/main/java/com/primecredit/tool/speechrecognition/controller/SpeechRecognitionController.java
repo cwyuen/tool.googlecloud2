@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.primecredit.tool.common.util.FileUtil;
 import com.primecredit.tool.common.util.WavFileHandler;
 import com.primecredit.tool.common.wsobject.request.RecongnitionRequest;
 import com.primecredit.tool.common.wsobject.response.RecognitionResponse;
@@ -37,7 +38,6 @@ public class SpeechRecognitionController {
 		response.setClientMachineId(request.getClientMachineId());
 		response.setMillisecond(new Date().getTime());
 		
-		WavFileHandler wavFileHandler = WavFileHandler.getInstance();
 		
 		StringBuilder sbTempFileName = new StringBuilder();
 		sbTempFileName.append(request.getClientMachineId() .replaceAll("[^\\p{Alpha}\\p{Digit}]+",""));
@@ -45,12 +45,17 @@ public class SpeechRecognitionController {
 		sbTempFileName.append(request.getMillisecond());
 		sbTempFileName.append(".wav");
 		
-		File sourceFile = wavFileHandler.generateFile(tempPath, sbTempFileName.toString(), request.getFileData());
+		try {
+			File sourceFile = FileUtil.generateFile(tempPath, sbTempFileName.toString(), request.getFileData());
+
+			List<String> speechTextList = googleSpeechConvertService.convert(sourceFile.getAbsolutePath());
+			response.setSpeechTextList(speechTextList);
+			
+			sourceFile.delete();
+		} catch (Exception e) {
+			logger.error(e.getMessage());
+		}
 		
-		List<String> speechTextList = googleSpeechConvertService.convert(sourceFile.getAbsolutePath());
-		response.setSpeechTextList(speechTextList);
-		
-		sourceFile.delete();
 		return response;
 		
 	}
